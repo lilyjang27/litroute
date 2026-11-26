@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0F1217">
+  <title>Lit Route · 밤길 가로등 지도</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%231B1F27'/%3E%3Cpath d='M13 31V9h15M23 9v8M18 19h10' fill='none' stroke='%23FFD54A' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/vendor/leaflet.css"><link rel="stylesheet" href="/style.css">
+  <script src="/vendor/leaflet.js" defer></script><script src="/app.js" defer></script>
+</head>
+<body>
+<svg class="svg-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+  <symbol id="i-lamp" viewBox="0 0 24 24"><path d="M7 21V4h12M16 4v5M12 11h8M14 15h4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14A8 8 0 0 1 10 4a8.5 8.5 0 1 0 10 10Z"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M8 4v16m-4-4 4 4 4-4M16 20V4m-4 4 4-4 4 4"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/></symbol>
+  <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></symbol>
+  <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5m6 0h5v5M4 15v5h5m6 0h5v-5"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+</defs></svg>
+<main id="app-shell" class="app-shell">
+  <aside class="sidebar" aria-label="경로 설정 및 추천 목록">
+    <header class="sidebar-header">
+      <a class="brand" href="/" aria-label="Lit Route 처음으로"><span class="brand-mark"><svg><use href="#i-lamp"/></svg></span><span>Lit Route<small>가로등을 따라 걷는 밤길</small></span></a>
+      <label class="theme-control" title="다크 모드 전환"><svg><use href="#i-moon"/></svg><input id="theme-toggle" type="checkbox" role="switch" aria-label="다크 모드" checked><span class="switch-track" aria-hidden="true"></span></label>
+    </header>
+    <button id="edit-route" class="mobile-edit-button" type="button"><svg><use href="#i-pin"/></svg><span id="mobile-route-label">숭실대학교 진리관 → 숭실대입구역 3번 출구</span><span>⌄</span></button>
+    <section class="planner" aria-label="경로 설정">
+      <div class="section-heading"><h1>어디로 걸어갈까요?</h1><button id="reset" class="text-button" type="button">초기화</button></div>
+      <div class="point-stack">
+        <button id="choose-start" class="point-button active" type="button" aria-pressed="true"><span class="point-symbol start-symbol">A</span><span class="point-content"><span class="field-label">출발지</span><span id="start-label" class="point-value">숭실대학교 진리관</span></span></button>
+        <button id="choose-end" class="point-button" type="button" aria-pressed="false"><span class="point-symbol end-symbol">B</span><span class="point-content"><span class="field-label">도착지</span><span id="end-label" class="point-value">숭실대입구역 3번 출구</span></span></button>
+        <button id="swap" class="swap-button" type="button" aria-label="출발지와 도착지 바꾸기"><svg><use href="#i-swap"/></svg></button>
+      </div>
+      <div class="planner-actions"><button id="example" class="outline-button" type="button">숭실대 예시 경로</button><details class="route-options"><summary>경로 옵션</summary><div class="options-content"><label for="preference">밝은 길 선호도<select id="preference"><option value="1">가볍게</option><option value="3" selected>균형 있게</option><option value="6">밝은 길 우선</option></select></label><label for="detour">최대 우회 거리<select id="detour"><option value="1.2">최단 거리의 1.2배</option><option value="1.5" selected>최단 거리의 1.5배</option><option value="2">최단 거리의 2배</option></select></label></div></details></div>
+      <button id="find-route" class="primary-button" type="button" disabled>밝은 길 찾기<svg><use href="#i-arrow"/></svg></button>
+      <p id="status" class="status" role="status" aria-live="polite">도로와 가로등 데이터를 준비하고 있습니다…</p>
+      <button id="retry" class="outline-button" type="button" hidden>데이터 준비 다시 시도</button><p id="error" class="error" role="alert" hidden></p>
+    </section>
+    <section id="results" class="results" aria-label="추천 경로 목록" hidden>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="results-heading"><h2>추천 경로 <span id="route-count"></span></h2><span class="results-hint">카드를 눌러 비교하세요</span></div>
+      <div id="route-list" class="route-list" aria-label="비교할 경로"></div>
+      <div class="carousel-nav"><button id="previous-route" type="button" aria-label="이전 경로">‹</button><span id="page-indicator">1 / 1</span><div id="route-dots" class="route-dots"></div><button id="next-route" type="button" aria-label="다음 경로">›</button></div>
+    </section>
+    <footer class="sidebar-footer">
+      <button id="view-route" class="primary-button" type="button" disabled>선택한 경로 보기<svg><use href="#i-arrow"/></svg></button>
+      <details class="data-info"><summary><span class="lamp-dot"></span>조명 위치 <strong id="light-count">—</strong>곳 · 데이터 안내</summary><div><p>조명 반경 20m, 도보 시간은 분당 75m 기준입니다. 조명 개수는 경로 주변의 중복을 합친 위치 수로 추정합니다.</p><p id="example-note"></p><p>실제 점등 상태와 보행 안전을 보장하지 않습니다. 경로 끝의 점선 연결 구간은 계산에서 제외합니다.</p><p id="source-info"></p></div></details>
+    </footer>
+  </aside>
+  <section class="map-panel" aria-label="가로등과 보행 경로 지도">
+    <div id="map"></div>
+    <div class="map-topbar"><span class="walking-label">도보</span><span id="route-heading">숭실대학교 진리관 → 숭실대입구역 3번 출구</span></div>
+    <div class="map-legends"><span class="chip"><i class="legend-line"></i>선택 경로</span><span class="chip"><i class="legend-warning"></i>조명 적은 구간</span><button id="show-lights" class="chip lamp-chip" type="button" aria-pressed="true"><i class="lamp-dot"></i>가로등 표시</button></div>
+    <div id="selected-summary" class="selected-summary" hidden><span class="summary-label">선택한 경로</span><strong id="summary-name"></strong><div class="summary-stats"><span id="summary-time"></span><span id="summary-distance"></span><span class="lamp-number" id="summary-lights"></span></div></div>
+    <div class="map-hint" id="map-hint" role="status">숭실대 예시 경로를 불러오고 있습니다.</div>
+    <div class="map-tools"><button id="fit-area" type="button" aria-label="전체 데이터 영역 보기" title="전체 영역"><svg><use href="#i-fit"/></svg></button><button id="locate" type="button" aria-label="현재 위치 표시" title="현재 위치"><svg><use href="#i-locate"/></svg></button></div>
+    <div id="map-error" class="map-error" role="status" hidden></div>
+    <section id="route-detail" class="route-detail" aria-label="선택한 경로 상세" hidden><div class="detail-heading"><h2>선택한 경로</h2><button id="close-detail" type="button" aria-label="경로 상세 닫기"><svg><use href="#i-close"/></svg></button></div><p id="detail-name"></p><p id="detail-stats"></p><p id="comparison"></p><p id="warning" class="warning-text" hidden></p><p id="snap-note" class="note"></p><p class="note">경로 미리보기입니다. 실시간 위치 추적이나 방향 안내는 제공하지 않습니다.</p></section>
+  </section>
+</main>
+</body>
+</html>
